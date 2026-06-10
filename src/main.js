@@ -1,5 +1,10 @@
 import { createApp } from 'vue'
-import './style.css'
 import App from './App.vue'
+import router from './router'
+import './style.css' // Pastikan file CSS Tailwind kamu di-import di sini
 
-createApp(App).mount('#app')
+const app = createApp(App)
+
+app.use(router) // Mengaktifkan rute di Vue
+
+app.mount('#app')

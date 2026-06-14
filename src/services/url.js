@@ -82,5 +82,30 @@ export const urlService = {
       console.error('URL Service Guest Shorten Error:', error);
       throw error;
     }
+  },
+
+  /**
+   * MEMUSNAHKAN DATA LINK SECARA PERMANEN (BARU)
+   * @param {string} shortCode - Kode pendek target (path variable)
+   */
+  async deleteUrl(shortCode) {
+    const token = localStorage.getItem('user_token');
+    const tokenType = localStorage.getItem('token_type') || 'Bearer';
+
+    try {
+      const response = await fetch(`/api/v1/urls/${shortCode}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `${tokenType} ${token}`,
+          'Accept': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+      return { status: response.status, data };
+    } catch (error) {
+      console.error('URL Service Delete Error:', error);
+      throw error;
+    }
   }
 };

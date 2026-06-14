@@ -15,10 +15,30 @@ const isMobileMenuOpen = ref(false)
           <span class="font-display text-xl md:text-2xl font-bold tracking-tighter text-primary-fixed-dim">LNK_SHRT</span>
         </div>
         
-        <nav class="hidden md:flex gap-8 items-center">
-          <router-link to="/" class="font-code text-xs text-primary-fixed-dim hover:bg-surface-variant transition-colors px-3 py-1">SHORTEN</router-link>
-          <router-link to="/auth/login" class="font-code text-xs text-on-surface-variant hover:bg-surface-variant transition-colors px-3 py-1">LOGIN</router-link>
-          <router-link to="/dashboard" class="font-code text-xs text-on-surface-variant hover:bg-surface-variant transition-colors px-3 py-1">DASHBOARD</router-link>
+        <nav class="hidden md:flex gap-6 items-center">
+          <router-link 
+            to="/" 
+            exact-active-class="text-primary-fixed-dim bg-surface-container-low border border-outline-variant"
+            class="font-code text-xs text-on-surface-variant hover:text-primary-fixed-dim transition-all px-3 py-1.5 border border-transparent"
+          >
+            SHORTEN
+          </router-link>
+          
+          <router-link 
+            to="/auth/login" 
+            active-class="text-primary-fixed-dim bg-surface-container-low border border-outline-variant"
+            class="font-code text-xs text-on-surface-variant hover:text-primary-fixed-dim transition-all px-3 py-1.5 border border-transparent"
+          >
+            LOGIN
+          </router-link>
+
+          <router-link 
+            to="/auth/register" 
+            active-class="text-primary-fixed-dim bg-surface-container-low border border-outline-variant"
+            class="font-code text-xs text-on-surface-variant hover:text-primary-fixed-dim transition-all px-3 py-1.5 border border-transparent"
+          >
+            REGISTER
+          </router-link>
         </nav>
 
         <button 
@@ -29,10 +49,33 @@ const isMobileMenuOpen = ref(false)
         </button>
       </div>
 
-      <div v-if="isMobileMenuOpen" class="md:hidden bg-background border-b border-outline-variant px-6 py-4 flex flex-col gap-4">
-        <router-link to="/" @click="isMobileMenuOpen = false" class="font-code text-sm text-primary-fixed-dim py-2">SHORTEN</router-link>
-        <router-link to="/auth/login" @click="isMobileMenuOpen = false" class="font-code text-sm text-on-surface-variant py-2">LOGIN</router-link>
-        <router-link to="/dashboard" @click="isMobileMenuOpen = false" class="font-code text-sm text-on-surface-variant py-2">DASHBOARD</router-link>
+      <div v-if="isMobileMenuOpen" class="md:hidden bg-background border-b border-outline-variant px-6 py-4 flex flex-col gap-2 text-left">
+        <router-link 
+          to="/" 
+          @click="isMobileMenuOpen = false" 
+          exact-active-class="text-primary-fixed-dim bg-surface-container-low pl-3 border-l-2 border-primary-container"
+          class="font-code text-sm text-on-surface-variant py-2 transition-all block"
+        >
+          SHORTEN
+        </router-link>
+        
+        <router-link 
+          to="/auth/login" 
+          @click="isMobileMenuOpen = false" 
+          active-class="text-primary-fixed-dim bg-surface-container-low pl-3 border-l-2 border-primary-container"
+          class="font-code text-sm text-on-surface-variant py-2 transition-all block"
+        >
+          LOGIN
+        </router-link>
+
+        <router-link 
+          to="/auth/register" 
+          @click="isMobileMenuOpen = false" 
+          active-class="text-primary-fixed-dim bg-surface-container-low pl-3 border-l-2 border-primary-container"
+          class="font-code text-sm text-on-surface-variant py-2 transition-all block"
+        >
+          REGISTER
+        </router-link>
       </div>
     </header>
 

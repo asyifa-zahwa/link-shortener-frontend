@@ -1,8 +1,8 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { authService } from '../../services/auth' // Import service terpusat
-import { useAuthStore } from '../../stores/auth' // Import Pinia store untuk auth
+import { authService } from '../../services/auth' // Pastikan path relative sesuai struktur projectmu
+import { useAuthStore } from '../../stores/auth'   // Pastikan path relative sesuai struktur projectmu
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -22,32 +22,24 @@ const handleLogin = async () => {
   isLoading.value = true
 
   try {
-    // Panggil service login dengan mengirimkan payload data
     const { status, data } = await authService.login({
       username: username.value,
       password: password.value
     })
 
-    // Jika login sukses (200 OK) dan server mengembalikan token
     if (status === 200 && data.accessToken) {
-      
       const loggedInUser = username.value
       
-  
-      // Simpan data sekaligus ke Pinia & LocalStorage
+      // Simpan data ke Pinia & LocalStorage
       authStore.saveLoginData(data.accessToken, data.tokenType, loggedInUser)
       
       console.log('Access Granted. System Token Saved.')
-      
-      // Alihkan user langsung masuk ke ruang rahasia dashboard
       router.push('/dashboard')
     } else {
-      // Tangani jika backend menolak kredensial (misal salah password/username)
       errorMessage.value = data.message || 'ACCESS_DENIED // Invalid security credentials.'
     }
 
   } catch (error) {
-    // Tangani jika server backend mati atau masalah jaringan
     errorMessage.value = 'CONNECTION_FAILURE // Critical authentication timeout.'
   } finally {
     isLoading.value = false
@@ -56,23 +48,30 @@ const handleLogin = async () => {
 </script>
 
 <template>
-  <div>
-    <div class="mb-6 text-center">
-      <h1 class="font-display text-xl md:text-2xl font-bold text-on-surface uppercase mb-2">Access Control</h1>
-      <div class="h-1 w-12 bg-primary-container mx-auto"></div>
-    </div>
-
-    <div v-if="errorMessage" class="mb-5 p-3 bg-red-950/40 border border-red-500 text-red-400 font-code text-xs uppercase tracking-wide">
-      [AUTH_ERROR]: {{ errorMessage }}
-    </div>
-
-    <form class="space-y-4" @submit.prevent="handleLogin">
+  <div class="min-h-[calc(100vh-160px)] flex flex-col justify-center items-center px-4 md:px-6 py-12">
+    
+    <div class="w-full max-w-md bg-[#161616] border border-outline-variant p-6 md:p-8 shadow-2xl relative">
       
-      <div class="flex flex-col gap-2">
-        <label class="font-code text-xs font-medium text-on-surface-variant uppercase tracking-widest" for="username">
-          USERNAME
-        </label>
-        <div class="relative">
+      <div class="mb-8 text-center">
+        <h1 class="font-display text-xl md:text-2xl font-bold text-on-surface uppercase mb-2 tracking-wide">
+          Access Control
+        </h1>
+        <div class="h-1 w-12 bg-primary-container mx-auto"></div>
+      </div>
+
+      <div 
+        v-if="errorMessage" 
+        class="mb-5 p-3 bg-red-950/40 border border-red-500 text-red-400 font-code text-xs uppercase tracking-wide text-left animate-in fade-in duration-200"
+      >
+        [AUTH_ERROR]: {{ errorMessage }}
+      </div>
+
+      <form class="space-y-5 text-left" @submit.prevent="handleLogin">
+        
+        <div class="flex flex-col gap-2">
+          <label class="font-code text-xs font-medium text-on-surface-variant uppercase tracking-widest" for="username">
+            USERNAME
+          </label>
           <input 
             id="username"
             v-model="username"
@@ -81,16 +80,14 @@ const handleLogin = async () => {
             placeholder="root@system" 
             required
             :disabled="isLoading"
-            class="w-full bg-surface-container text-on-surface border border-outline px-4 py-3 font-code text-sm placeholder:text-on-surface-variant/30 transition-all focus:border-primary-container focus:ring-0 rounded-none disabled:opacity-50"
+            class="w-full bg-[#1e1e1e] text-on-surface border border-outline px-4 py-3 font-code text-sm placeholder:text-on-surface-variant/30 transition-all focus:border-primary-container focus:ring-0 rounded-none disabled:opacity-50 outline-none"
           />
         </div>
-      </div>
 
-      <div class="flex flex-col gap-2">
-        <label class="font-code text-xs font-medium text-on-surface-variant uppercase tracking-widest" for="password">
-          PASSWORD
-        </label>
-        <div class="relative">
+        <div class="flex flex-col gap-2">
+          <label class="font-code text-xs font-medium text-on-surface-variant uppercase tracking-widest" for="password">
+            PASSWORD
+          </label>
           <input 
             id="password"
             v-model="password"
@@ -99,24 +96,22 @@ const handleLogin = async () => {
             placeholder="••••••••••••" 
             required
             :disabled="isLoading"
-            class="w-full bg-surface-container text-on-surface border border-outline px-4 py-3 font-code text-sm placeholder:text-on-surface-variant/30 transition-all focus:border-primary-container focus:ring-0 rounded-none disabled:opacity-50"
+            class="w-full bg-[#1e1e1e] text-on-surface border border-outline px-4 py-3 font-code text-sm placeholder:text-on-surface-variant/30 transition-all focus:border-primary-container focus:ring-0 rounded-none disabled:opacity-50 outline-none"
           />
         </div>
-      </div>
 
-      <div class="pt-2">
-        <button 
-          type="submit" 
-          :disabled="isLoading"
-          class="w-full bg-primary-container text-on-primary font-display text-base font-extrabold py-4 transition-all active:scale-95 hover:brightness-110 uppercase tracking-tighter disabled:opacity-50 disabled:scale-100 text-black"
-        >
-          {{ isLoading ? 'INITIALIZING ACCESS...' : 'LOGIN' }}
-        </button>
-      </div>
-    </form>
+        <div class="pt-3">
+          <button 
+            type="submit" 
+            :disabled="isLoading"
+            class="w-full bg-primary-container text-black font-code text-sm font-extrabold py-3.5 transition-all active:scale-95 hover:brightness-110 uppercase tracking-wider disabled:opacity-50 disabled:scale-100 rounded-none whitespace-nowrap"
+          >
+            {{ isLoading ? 'INITIALIZING ACCESS...' : 'LOGIN' }}
+          </button>
+        </div>
+      </form>
 
-    <div class="mt-6 flex flex-col gap-4">
-      <div class="flex justify-between items-center font-code text-xs">
+      <div class="mt-6 flex justify-between items-center font-code text-xs border-b border-outline-variant/20 pb-5">
         <a href="#" class="text-on-surface-variant hover:text-primary-fixed-dim transition-colors uppercase tracking-widest border-b border-transparent hover:border-primary-fixed-dim">
           LOST ACCESS?
         </a>
@@ -124,18 +119,24 @@ const handleLogin = async () => {
           REGISTER
         </router-link>
       </div>
+
+      <div class="mt-4 flex items-center justify-between pt-1">
+        <span class="text-[10px] font-code text-on-surface-variant/40 uppercase">
+          Secured by LNK_SHRT_VAULT
+        </span>
+        <div class="flex gap-1">
+          <div class="w-1.5 h-1.5 bg-outline-variant/40"></div>
+          <div class="w-1.5 h-1.5 bg-outline-variant/40"></div>
+          <div class="w-1.5 h-1.5 bg-primary-container animate-pulse"></div>
+        </div>
+      </div>
+
     </div>
 
-    <div class="mt-6 flex items-center justify-between border-t border-outline-variant/30 pt-4">
-      <span class="text-[10px] font-code text-on-surface-variant/50 uppercase">
-        Secured by LNK_SHRT_VAULT
-      </span>
-      <div class="flex gap-1">
-        <div class="w-1.5 h-1.5 bg-outline-variant"></div>
-        <div class="w-1.5 h-1.5 bg-outline-variant"></div>
-        <div class="w-1.5 h-1.5 bg-primary-container animate-pulse"></div>
-      </div>
+    <div class="mt-6 font-code text-[11px] text-on-surface-variant/40 uppercase tracking-widest">
+      SECURE_ACCESS_LAYER // v2.4.0
     </div>
+
   </div>
 </template>
 

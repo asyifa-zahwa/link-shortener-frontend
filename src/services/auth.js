@@ -56,5 +56,34 @@ export const authService = {
       console.error('API Service Login Error:', error)
       throw error
     }
+  },
+
+  /**
+   * Mengirim request deaktivasi token (Logout) ke backend resmi
+   * @returns {Promise<Object>} Status HTTP dan data response
+   */
+  async logout() {
+    const token = localStorage.getItem('user_token')
+    const tokenType = localStorage.getItem('token_type') || 'Bearer'
+
+    try {
+      const response = await fetch('/api/v1/auth/logout', {
+        method: 'POST',
+        headers: {
+          // Menyertakan token JWT agar Spring Boot tahu token mana yang harus dablacklist
+          'Authorization': `${tokenType} ${token}`,
+          'Accept': 'application/json'
+        }
+      })
+
+      const data = await response.json()
+      return {
+        status: response.status,
+        data: data
+      }
+    } catch (error) {
+      console.error('API Service Logout Error:', error)
+      throw error
+    }
   }
 }

@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '../stores/auth' // Import Pinia store untuk auth
 
 const routes = [
   {
@@ -56,6 +57,24 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes
+})
+
+// --- NAVIGATION GUARD ---
+router.beforeEach((to, from, next) => {
+  // PANGGIL STORE DI DALAM SINI, JANGAN DI LUAR!
+  const authStore = useAuthStore()
+
+  // Jika halaman yang dituju butuh auth, tapi user BELUM login
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    next('/auth/login')
+  } 
+  // Jika user SUDAH login tapi iseng mau buka halaman auth lagi
+  else if (to.path.startsWith('/auth') && authStore.isAuthenticated) {
+    next('/dashboard')
+  } 
+  else {
+    next() // Izinkan lewat
+  }
 })
 
 export default router

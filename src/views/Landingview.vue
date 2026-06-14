@@ -1,29 +1,62 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
+import { urlService } from '../services/url' // Import service URL terpusat
 
-// State untuk menampung input URL dari user
+// State asli bawaan kamu
 const longUrl = ref('')
-
-// State reaktif untuk simulasi dashboard teknis (Latency per detik)
 const latency = ref(14)
 let latencyInterval = null
 
-// Fungsi aksi saat tombol SHORTEN ditekan
-const handleShorten = () => {
+// State Tambahan untuk Integrasi API Guest
+const isCompiling = ref(false)
+const generatedResult = ref(null)
+const errorMessage = ref('')
+const isCopied = ref(false)
+
+// Fungsi aksi saat tombol SHORTEN ditekan (Kini terhubung penuh ke API Backend)
+const handleShorten = async () => {
   if (!longUrl.value) return
-  console.log('URL yang akan dipendekkan:', longUrl.value)
-  // Tempat menaruh integrasi API kamu nantinya
+  
+  isCompiling.value = true
+  errorMessage.value = ''
+  generatedResult.value = null
+  isCopied.value = false
+
+  try {
+    const { status, data } = await urlService.shortenUrlAsGuest({
+      longUrl: longUrl.value
+    })
+
+    // Mendukung status HTTP 200 atau 201 sesuai spesifikasi backend-mu
+    if ((status === 200 || status === 201) && data.shortUrl) {
+      generatedResult.value = data     // Berisi { longUrl, shortUrl, shortCode }
+      longUrl.value = ''               // Reset field input utama seperti aslinya
+    } else {
+      errorMessage.value = data.error || 'GENERATION_FAILED // Uplink rejected data block.'
+    }
+  } catch (error) {
+    errorMessage.value = 'NETWORK_CRASH // Communication with compiler layer failed.'
+  } finally {
+    isCompiling.value = false
+  }
 }
 
-// Siklus hidup komponen untuk menjalankan simulasi metrik
+// Fungsi menyalin link hasil generate tamu
+const copyGuestLink = (text) => {
+  navigator.clipboard.writeText(text).then(() => {
+    isCopied.value = true
+    setTimeout(() => { isCopied.value = false }, 2000)
+  })
+}
+
+// Siklus hidup komponen asli kamu untuk menjalankan simulasi metrik latency
 onMounted(() => {
   latencyInterval = setInterval(() => {
-    // Simulasi fluktuasi latency jaringan antara 12ms - 18ms
     latency.value = Math.floor(Math.random() * (18 - 12 + 1) + 12)
   }, 3000)
 })
 
-// Membersihkan interval saat user pindah halaman agar memori optimal
+// Membersihkan interval asli kamu saat pindah halaman
 onUnmounted(() => {
   if (latencyInterval) clearInterval(latencyInterval)
 })
@@ -32,16 +65,20 @@ onUnmounted(() => {
 <template>
   <div class="space-y-16">
     
-    <section class="max-w-[1200px] mx-auto px-6 md:px-12 mt-8 md:mt-12">
+    <section class="max-w-[1200px] mx-auto px-6 md:px-12 mt-8 md:mt-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div class="flex flex-col items-center text-center space-y-6">
         
-        <h1 class="font-display text-3xl md:text-5xl lg:text-6xl font-extrabold max-w-4xl tracking-tight leading-tight">
+        <h1 class="font-display text-3xl md:text-5xl lg:text-6xl font-extrabold max-w-4xl tracking-tight leading-tight uppercase">
           Shorten Your Link <span class="text-primary-fixed-dim">Instantly</span>
         </h1>
         
         <p class="font-body text-sm md:text-base lg:text-lg text-on-surface-variant max-w-2xl">
           High-performance link infrastructure for technical teams. No tracking, zero cookies, enterprise-grade reliability.
         </p>
+
+        <div v-if="errorMessage" class="w-full max-w-3xl p-3 bg-red-950/40 border border-red-500 text-red-400 font-code text-xs uppercase tracking-wide text-left animate-in fade-in duration-300">
+          [SYSTEM_ERROR]: {{ errorMessage }}
+        </div>
 
         <div class="w-full max-w-3xl mt-6 md:mt-10 relative group">
           <div class="flex flex-col md:flex-row gap-0 border border-outline bg-surface-container-low focus-within:border-primary-container transition-all duration-300">
@@ -50,28 +87,64 @@ onUnmounted(() => {
               <span class="material-symbols-outlined text-on-surface-variant mr-4">link</span>
               <input 
                 v-model="longUrl"
-                type="text" 
+                type="url" 
+                :disabled="isCompiling"
                 placeholder="PASTE YOUR LONG URL HERE..." 
-                class="bg-transparent border-none focus:ring-0 w-full font-code text-xs md:text-sm text-on-surface placeholder-on-tertiary-container outline-none uppercase tracking-widest"
+                class="bg-transparent border-none focus:ring-0 w-full font-code text-xs md:text-sm text-on-surface placeholder-on-tertiary-container outline-none uppercase tracking-widest disabled:opacity-50"
               />
             </div>
             
             <button 
               @click="handleShorten"
-              class="bg-primary-container text-on-primary-container font-code text-xs md:text-sm px-8 md:px-10 py-4 md:py-5 font-bold hover:brightness-110 active:scale-95 transition-all"
+              :disabled="isCompiling || !longUrl"
+              class="bg-primary-container text-black font-code text-xs md:text-sm px-8 md:px-10 py-4 md:py-5 font-bold hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 uppercase"
             >
-              SHORTEN
+              {{ isCompiling ? 'COMPILING...' : 'SHORTEN' }}
             </button>
           </div>
 
           <div class="flex flex-wrap justify-between gap-2 mt-4 font-code text-[11px] md:text-xs text-on-tertiary-container px-2">
             <span class="flex items-center gap-2">
               <span class="w-2 h-2 bg-primary-container rounded-full animate-pulse"></span> 
-              SYSTEM: OPTIMAL
+              SYSTEM: {{ isCompiling ? 'PROCESSING' : 'OPTIMAL' }}
             </span>
             <span>LATENCY: {{ latency }}MS</span>
             <span>NODES: 412 ACTIVE</span>
           </div>
+        </div>
+
+        <div 
+          v-if="generatedResult" 
+          class="w-full max-w-3xl bg-surface-container border-2 border-primary-container p-5 mt-6 text-left space-y-3 animate-in fade-in slide-in-from-top-2 duration-300"
+        >
+          <div class="flex items-center gap-2 text-primary-container font-code text-xs font-bold uppercase tracking-widest">
+            <span class="material-symbols-outlined text-sm">check_circle</span> LINK_COMPILED_SUCCESSFULLY
+          </div>
+
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-background border border-outline-variant p-4">
+            <div class="flex flex-col gap-1 overflow-hidden w-full">
+              <span class="font-code text-sm md:text-base font-bold text-primary-fixed-dim selection:bg-primary-container/30">
+                {{ generatedResult.shortUrl }}
+              </span>
+              <span class="text-on-surface-variant font-code text-[11px] truncate max-w-full" :title="generatedResult.longUrl">
+                ORIGINAL: {{ generatedResult.longUrl }}
+              </span>
+            </div>
+
+            <button 
+              @click="copyGuestLink(generatedResult.shortUrl)"
+              class="w-full sm:w-auto px-5 py-2.5 font-code text-xs font-bold uppercase transition-all flex items-center justify-center gap-2"
+              :class="isCopied ? 'bg-green-950 text-green-400 border border-green-500' : 'bg-surface-variant text-on-surface hover:brightness-110 border border-outline-variant'"
+            >
+              <span class="material-symbols-outlined text-sm">
+                {{ isCopied ? 'done' : 'content_copy' }}
+              </span>
+              {{ isCopied ? 'COPIED!' : 'COPY' }}
+            </button>
+          </div>
+          <p class="font-code text-[10px] text-on-surface-variant/50 uppercase">
+            * NOTICE: Guest links are completely anonymous and do not track click metrics. Create an account for permanent data storage.
+          </p>
         </div>
 
       </div>
@@ -157,7 +230,6 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* Mematikan highlight bawaan mobile browser saat input aktif */
 input:focus {
   outline: none;
 }

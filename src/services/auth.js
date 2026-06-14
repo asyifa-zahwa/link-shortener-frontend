@@ -31,10 +31,30 @@ export const authService = {
   },
 
   /**
-   * Mengirim data kredensial login ke backend (Placeholder untuk step berikutnya)
+   * Mengirim data kredensial login ke backend
    * @param {Object} payload - { username, password }
+   * @returns {Promise<Object>} Response data berisi accessToken
    */
   async login(payload) {
-    // Jalur ini siap kamu isi saat kita masuk ke integrasi API Login nanti
+    try {
+      const response = await fetch('/api/v1/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      })
+
+      const data = await response.json()
+
+      return {
+        status: response.status,
+        data: data
+      }
+    } catch (error) {
+      console.error('API Service Login Error:', error)
+      throw error
+    }
   }
 }

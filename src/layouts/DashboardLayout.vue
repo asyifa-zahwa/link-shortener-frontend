@@ -131,9 +131,7 @@ const finalizeLogout = () => {
           <router-link to="/dashboard/my-links" class="flex items-center gap-3 font-code text-sm px-4 py-3 border border-transparent hover:border-outline-variant transition-all text-on-surface-variant" active-class="border-primary-container text-primary-fixed-dim bg-surface-container-low">
             <span class="material-symbols-outlined text-lg">list</span> MY LINKS
           </router-link>
-          <router-link to="/dashboard/analytics" class="flex items-center gap-3 font-code text-sm px-4 py-3 border border-transparent hover:border-outline-variant transition-all text-on-surface-variant" active-class="border-primary-container text-primary-fixed-dim bg-surface-container-low">
-            <span class="material-symbols-outlined text-lg">analytics</span> ANALYTICS
-          </router-link>
+          
         </nav>
       </div>
 
@@ -172,9 +170,6 @@ const finalizeLogout = () => {
       </router-link>
       <router-link to="/dashboard/my-links" class="text-on-surface-variant flex flex-col items-center justify-center transition-all" active-class="text-primary-fixed-dim scale-110">
         <span class="material-symbols-outlined">list</span>
-      </router-link>
-      <router-link to="/dashboard/analytics" class="text-on-surface-variant flex flex-col items-center justify-center transition-all" active-class="text-primary-fixed-dim scale-110">
-        <span class="material-symbols-outlined">analytics</span>
       </router-link>
       
       <button 

@@ -107,5 +107,30 @@ export const urlService = {
       console.error('URL Service Delete Error:', error);
       throw error;
     }
+  },
+
+  /**
+   * MENGAMBIL METRIK DATA ANALITIK SPESIFIK (BARU)
+   * @param {string} shortCode - Kode pendek target (path variable)
+   */
+  async getUrlAnalytics(shortCode) {
+    const token = localStorage.getItem('user_token');
+    const tokenType = localStorage.getItem('token_type') || 'Bearer';
+
+    try {
+      const response = await fetch(`/api/v1/urls/${shortCode}/analytics`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `${tokenType} ${token}`,
+          'Accept': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+      return { status: response.status, data };
+    } catch (error) {
+      console.error('URL Service Analytics Error:', error);
+      throw error;
+    }
   }
 };

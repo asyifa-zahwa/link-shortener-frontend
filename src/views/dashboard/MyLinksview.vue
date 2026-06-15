@@ -12,6 +12,7 @@ const pageInfo = ref({
 // State UI Tracking & Notifikasi
 const isLoading = ref(false)
 const isDeleting = ref(false)
+const isAnalyticsLoading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 const copiedId = ref(null)
@@ -19,6 +20,10 @@ const copiedId = ref(null)
 // State Kustom Modal Delete
 const isDeleteModalOpen = ref(false)
 const targetDeleteCode = ref('')
+
+// --- STATE BARU: CONTEXTUAL ANALYTICS DRAWER ---
+const isAnalyticsOpen = ref(false)
+const analyticsData = ref(null)
 
 const totalEntries = computed(() => pageInfo.value.totalItems)
 
@@ -40,35 +45,56 @@ const fetchAllLinks = async (page = 0) => {
   }
 }
 
-// Memicu jendela konfirmasi kustom terbuka
+// Fungsi membuka laci analitik & tembak API berdasarkan ShortCode yang diklik
+const openAnalyticsDrawer = async (shortCode) => {
+  isAnalyticsOpen.value = true
+  isAnalyticsLoading.value = true
+  analyticsData.value = null
+  errorMessage.value = ''
+
+  try {
+    const { status, data } = await urlService.getUrlAnalytics(shortCode)
+    if (status === 200 && data.success) {
+      analyticsData.value = data.data
+    } else {
+      errorMessage.value = `ANALYTICS_ERROR // Failed to gather metrics for '${shortCode}'`
+      isAnalyticsOpen.value = false
+    }
+  } catch (error) {
+    errorMessage.value = 'METRIC_CRASH // Telemetry stream configuration failed.'
+    isAnalyticsOpen.value = false
+  } finally {
+    isAnalyticsLoading.value = false
+  }
+}
+
+// Helper penghitung persentase grafik batang Tailwind murni
+const calculatePercentage = (value, total) => {
+  if (!total || total === 0) return '0%'
+  const percentage = (value / total) * 100
+  return `${percentage.toFixed(1)}%`
+}
+
 const confirmDelete = (shortCode) => {
   targetDeleteCode.value = shortCode
   isDeleteModalOpen.value = true
 }
 
-// Mengeksekusi penghapusan via API murni DELETE
 const executeDeleteLink = async () => {
   if (!targetDeleteCode.value) return
-
   isDeleting.value = true
   errorMessage.value = ''
   successMessage.value = ''
 
   try {
     const { status, data } = await urlService.deleteUrl(targetDeleteCode.value)
-
     if (status === 200 && data.success) {
       successMessage.value = `DELETION_SUCCESS // ${data.message}`
       isDeleteModalOpen.value = false
       targetDeleteCode.value = ''
-      
-      // Mengambil ulang data di halaman saat ini agar tabel otomatis ter-refresh
       await fetchAllLinks(pageInfo.value.currentPage)
-      
-      // Menghilangkan banner sukses otomatis setelah 4 detik
       setTimeout(() => { successMessage.value = '' }, 4000)
     } else {
-      // Menangkap Kasus 2 (403 Forbidden) atau Kasus 3 (404 Not Found) langsung dari pesan Backend kamu
       errorMessage.value = data.message || 'ACCESS_DENIED // Purge request rejected.'
       isDeleteModalOpen.value = false
     }
@@ -103,38 +129,119 @@ const formatDate = (dateStr) => {
 </script>
 
 <template>
-  <div class="space-y-6 animate-in fade-in duration-300 relative">
+  <div class="space-y-6 animate-in fade-in duration-300 relative overflow-hidden">
     
     <div 
-      v-if="isDeleteModalOpen" 
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+      v-if="isAnalyticsOpen"
+      @click.self="isAnalyticsOpen = false"
+      class="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px] flex justify-end animate-in fade-in duration-200"
     >
+      <div class="bg-surface-container-low border-l-2 border-outline-variant w-full max-w-md h-full p-6 md:p-8 flex flex-col justify-between shadow-2xl animate-in slide-in-from-right duration-300 rounded-none overflow-y-auto custom-scrollbar">
+        
+        <div class="space-y-6">
+          <div class="flex justify-between items-center border-b border-outline-variant pb-4">
+            <div class="text-left">
+              <span class="font-code text-[10px] text-primary-fixed-dim uppercase tracking-widest block">TELEMETRY_LOG // ACTIVE</span>
+              <h3 class="font-display text-lg font-bold text-on-background uppercase tracking-tight">Link_Analytics</h3>
+            </div>
+            <button 
+              @click="isAnalyticsOpen = false" 
+              class="material-symbols-outlined text-on-surface-variant hover:text-primary-fixed-dim transition-colors p-1"
+            >
+              close
+            </button>
+          </div>
+
+          <div v-if="isAnalyticsLoading" class="py-20 text-center font-code text-xs text-primary-container animate-pulse">
+            QUERYING_METRICS_FROM_DATABASE_NODES...
+          </div>
+
+          <div v-else-if="analyticsData" class="space-y-8 text-left">
+            
+            <div class="bg-surface-container-lowest border border-outline-variant p-4 space-y-1">
+              <div class="font-code text-[11px] text-on-surface-variant">TARGET_NODE_ID:</div>
+              <div class="font-code text-sm font-bold text-primary-fixed-dim truncate">{{ analyticsData.shortCode }}</div>
+              <div class="grid grid-cols-2 pt-3 border-t border-outline-variant/40 mt-2">
+                <div>
+                  <span class="font-code text-[10px] text-on-surface-variant block">TOTAL_ENGAGEMENT</span>
+                  <span class="font-code text-lg font-bold text-on-background">{{ analyticsData.totalClicks.toLocaleString() }} <span class="text-xs font-normal text-on-surface-variant">clicks</span></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-sm text-primary-fixed-dim">devices</span>
+                <h4 class="font-code text-xs font-bold uppercase tracking-wider text-on-surface">CLICKS_BY_DEVICE</h4>
+              </div>
+              
+              <div class="space-y-3 bg-surface-container-lowest border border-outline-variant p-4">
+                <div v-for="(clicks, device) in analyticsData.clicksByDevice" :key="device" class="space-y-1">
+                  <div class="flex justify-between font-code text-xs">
+                    <span class="uppercase text-on-surface-variant">{{ device }}</span>
+                    <span class="font-bold text-on-background">
+                      {{ clicks }} ({{ calculatePercentage(clicks, analyticsData.totalClicks) }})
+                    </span>
+                  </div>
+                  <div class="w-full bg-surface-container-high h-2.5 rounded-none overflow-hidden border border-outline-variant/30">
+                    <div 
+                      class="bg-primary-container h-full transition-all duration-1000"
+                      :style="{ width: calculatePercentage(clicks, analyticsData.totalClicks) }"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-sm text-primary-fixed-dim">language</span>
+                <h4 class="font-code text-xs font-bold uppercase tracking-wider text-on-surface">CLICKS_BY_BROWSER</h4>
+              </div>
+              
+              <div class="space-y-3 bg-surface-container-lowest border border-outline-variant p-4">
+                <div v-for="(clicks, browser) in analyticsData.clicksByBrowser" :key="browser" class="space-y-1">
+                  <div class="flex justify-between font-code text-xs">
+                    <span class="uppercase text-on-surface-variant">{{ browser }}</span>
+                    <span class="font-bold text-on-background">
+                      {{ clicks }} ({{ calculatePercentage(clicks, analyticsData.totalClicks) }})
+                    </span>
+                  </div>
+                  <div class="w-full bg-surface-container-high h-2.5 rounded-none overflow-hidden border border-outline-variant/30">
+                    <div 
+                      class="bg-primary-fixed-dim h-full transition-all duration-1000"
+                      :style="{ width: calculatePercentage(clicks, analyticsData.totalClicks) }"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="border-t border-outline-variant/40 pt-4 font-code text-[11px] text-on-surface-variant text-left flex justify-between">
+          <span>SYSTEM_STATUS // ONLINE</span>
+          <span>V1.0.0</span>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="isDeleteModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div class="bg-surface-container-low border-2 border-outline-variant w-full max-w-md p-6 md:p-8 space-y-6 relative rounded-none shadow-2xl">
         <div class="flex justify-between items-center border-b border-outline-variant/40 pb-3 text-on-surface-variant font-code text-[11px]">
           <span>REPOSITORY_MANAGEMENT // PURGE_CORE</span>
           <span class="text-error animate-pulse">● SECURE_ZONE</span>
         </div>
-
-        <div class="space-y-2">
-          <h3 class="font-display text-lg font-bold text-on-background uppercase tracking-tight text-left">PURGE_SHORT_CODE?</h3>
-          <p class="font-code text-xs text-on-surface-variant leading-relaxed text-left">
+        <div class="space-y-2 text-left">
+          <h3 class="font-display text-lg font-bold text-on-background uppercase tracking-tight">PURGE_SHORT_CODE?</h3>
+          <p class="font-code text-xs text-on-surface-variant leading-relaxed">
             Apakah Anda yakin ingin memusnahkan link pendek <span class="text-primary-fixed-dim font-bold">'{{ targetDeleteCode }}'</span>? Data pada layer Database & cache Redis akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan.
           </p>
         </div>
-
         <div class="flex gap-4 font-code text-xs pt-2">
-          <button 
-            @click="isDeleteModalOpen = false" 
-            :disabled="isDeleting"
-            class="flex-1 border border-outline text-on-surface hover:bg-surface-variant py-3 transition-all rounded-none uppercase font-bold disabled:opacity-40"
-          >
-            ABORT_REQ
-          </button>
-          <button 
-            @click="executeDeleteLink" 
-            :disabled="isDeleting"
-            class="flex-1 bg-red-600 text-white hover:bg-red-500 py-3 transition-all rounded-none uppercase font-bold active:scale-95 disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2"
-          >
+          <button @click="isDeleteModalOpen = false" :disabled="isDeleting" class="flex-1 border border-outline text-on-surface hover:bg-surface-variant py-3 transition-all rounded-none uppercase font-bold disabled:opacity-40">ABORT_REQ</button>
+          <button @click="executeDeleteLink" :disabled="isDeleting" class="flex-1 bg-red-600 text-white hover:bg-red-500 py-3 transition-all rounded-none uppercase font-bold active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2">
             <span v-if="isDeleting" class="material-symbols-outlined text-sm animate-spin">sync</span>
             {{ isDeleting ? 'PURGING...' : 'COMMIT_DELETE' }}
           </button>
@@ -221,6 +328,14 @@ const formatDate = (dateStr) => {
                   <span class="material-symbols-outlined text-base">
                     {{ copiedId === link.shortCode ? 'check_circle' : 'content_copy' }}
                   </span>
+                </button>
+                
+                <button 
+                  @click="openAnalyticsDrawer(link.shortCode)"
+                  class="p-2 hover:bg-surface-variant text-on-surface-variant hover:text-primary-fixed-dim transition-all rounded"
+                  title="View Analytics"
+                >
+                  <span class="material-symbols-outlined text-base">monitoring</span>
                 </button>
                 
                 <button 

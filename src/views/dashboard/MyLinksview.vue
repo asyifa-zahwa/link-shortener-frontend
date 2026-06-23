@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { urlService } from '../../services/url'
 
 const links = ref([])
@@ -21,17 +21,22 @@ const copiedId = ref(null)
 const isDeleteModalOpen = ref(false)
 const targetDeleteCode = ref('')
 
-// --- STATE BARU: CONTEXTUAL ANALYTICS DRAWER ---
+// State Contextual Analytics Drawer
 const isAnalyticsOpen = ref(false)
 const analyticsData = ref(null)
 
+// --- STATE BARU: PENCARIAN DENGAN DEBOUNCE ---
+const searchQuery = ref('')
+let debounceTimeout = null
+
 const totalEntries = computed(() => pageInfo.value.totalItems)
 
+// Fungsi fetch yang sudah mendukung parameter pencarian
 const fetchAllLinks = async (page = 0) => {
   isLoading.value = true
   errorMessage.value = ''
   try {
-    const { status, data } = await urlService.getMyUrls(page, 15)
+    const { status, data } = await urlService.getMyUrls(page, 15, searchQuery.value)
     if (status === 200 && data.success) {
       links.value = data.data
       pageInfo.value = data.pageInfo
@@ -45,7 +50,18 @@ const fetchAllLinks = async (page = 0) => {
   }
 }
 
-// Fungsi membuka laci analitik & tembak API berdasarkan ShortCode yang diklik
+// --- IMPLEMENTASI DEBOUNCE SEARCH WATCHER ---
+watch(searchQuery, () => {
+  // Bersihkan pemanggilan timeout sebelumnya jika user masih mengetik aktif
+  clearTimeout(debounceTimeout)
+  
+  // Setel jeda 500ms setelah ketikan terakhir untuk memulai hit ke API
+  debounceTimeout = setTimeout(() => {
+    // Setiap kali melakukan pencarian baru, reset penomoran halaman kembali ke indeks 0
+    fetchAllLinks(0)
+  }, 500)
+})
+
 const openAnalyticsDrawer = async (shortCode) => {
   isAnalyticsOpen.value = true
   isAnalyticsLoading.value = true
@@ -68,7 +84,6 @@ const openAnalyticsDrawer = async (shortCode) => {
   }
 }
 
-// Helper penghitung persentase grafik batang Tailwind murni
 const calculatePercentage = (value, total) => {
   if (!total || total === 0) return '0%'
   const percentage = (value / total) * 100
@@ -131,33 +146,20 @@ const formatDate = (dateStr) => {
 <template>
   <div class="space-y-6 animate-in fade-in duration-300 relative overflow-hidden">
     
-    <div 
-      v-if="isAnalyticsOpen"
-      @click.self="isAnalyticsOpen = false"
-      class="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px] flex justify-end animate-in fade-in duration-200"
-    >
+    <div v-if="isAnalyticsOpen" @click.self="isAnalyticsOpen = false" class="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px] flex justify-end animate-in fade-in duration-200">
       <div class="bg-surface-container-low border-l-2 border-outline-variant w-full max-w-md h-full p-6 md:p-8 flex flex-col justify-between shadow-2xl animate-in slide-in-from-right duration-300 rounded-none overflow-y-auto custom-scrollbar">
-        
         <div class="space-y-6">
           <div class="flex justify-between items-center border-b border-outline-variant pb-4">
             <div class="text-left">
               <span class="font-code text-[10px] text-primary-fixed-dim uppercase tracking-widest block">TELEMETRY_LOG // ACTIVE</span>
               <h3 class="font-display text-lg font-bold text-on-background uppercase tracking-tight">Link_Analytics</h3>
             </div>
-            <button 
-              @click="isAnalyticsOpen = false" 
-              class="material-symbols-outlined text-on-surface-variant hover:text-primary-fixed-dim transition-colors p-1"
-            >
-              close
-            </button>
+            <button @click="isAnalyticsOpen = false" class="material-symbols-outlined text-on-surface-variant hover:text-primary-fixed-dim transition-colors p-1">close</button>
           </div>
 
-          <div v-if="isAnalyticsLoading" class="py-20 text-center font-code text-xs text-primary-container animate-pulse">
-            QUERYING_METRICS_FROM_DATABASE_NODES...
-          </div>
+          <div v-if="isAnalyticsLoading" class="py-20 text-center font-code text-xs text-primary-container animate-pulse">QUERYING_METRICS_FROM_DATABASE_NODES...</div>
 
           <div v-else-if="analyticsData" class="space-y-8 text-left">
-            
             <div class="bg-surface-container-lowest border border-outline-variant p-4 space-y-1">
               <div class="font-code text-[11px] text-on-surface-variant">TARGET_NODE_ID:</div>
               <div class="font-code text-sm font-bold text-primary-fixed-dim truncate">{{ analyticsData.shortCode }}</div>
@@ -174,20 +176,14 @@ const formatDate = (dateStr) => {
                 <span class="material-symbols-outlined text-sm text-primary-fixed-dim">devices</span>
                 <h4 class="font-code text-xs font-bold uppercase tracking-wider text-on-surface">CLICKS_BY_DEVICE</h4>
               </div>
-              
               <div class="space-y-3 bg-surface-container-lowest border border-outline-variant p-4">
                 <div v-for="(clicks, device) in analyticsData.clicksByDevice" :key="device" class="space-y-1">
                   <div class="flex justify-between font-code text-xs">
                     <span class="uppercase text-on-surface-variant">{{ device }}</span>
-                    <span class="font-bold text-on-background">
-                      {{ clicks }} ({{ calculatePercentage(clicks, analyticsData.totalClicks) }})
-                    </span>
+                    <span class="font-bold text-on-background">{{ clicks }} ({{ calculatePercentage(clicks, analyticsData.totalClicks) }})</span>
                   </div>
                   <div class="w-full bg-surface-container-high h-2.5 rounded-none overflow-hidden border border-outline-variant/30">
-                    <div 
-                      class="bg-primary-container h-full transition-all duration-1000"
-                      :style="{ width: calculatePercentage(clicks, analyticsData.totalClicks) }"
-                    ></div>
+                    <div class="bg-primary-container h-full transition-all duration-1000" :style="{ width: calculatePercentage(clicks, analyticsData.totalClicks) }"></div>
                   </div>
                 </div>
               </div>
@@ -198,28 +194,20 @@ const formatDate = (dateStr) => {
                 <span class="material-symbols-outlined text-sm text-primary-fixed-dim">language</span>
                 <h4 class="font-code text-xs font-bold uppercase tracking-wider text-on-surface">CLICKS_BY_BROWSER</h4>
               </div>
-              
               <div class="space-y-3 bg-surface-container-lowest border border-outline-variant p-4">
                 <div v-for="(clicks, browser) in analyticsData.clicksByBrowser" :key="browser" class="space-y-1">
                   <div class="flex justify-between font-code text-xs">
                     <span class="uppercase text-on-surface-variant">{{ browser }}</span>
-                    <span class="font-bold text-on-background">
-                      {{ clicks }} ({{ calculatePercentage(clicks, analyticsData.totalClicks) }})
-                    </span>
+                    <span class="font-bold text-on-background">{{ clicks }} ({{ calculatePercentage(clicks, analyticsData.totalClicks) }})</span>
                   </div>
                   <div class="w-full bg-surface-container-high h-2.5 rounded-none overflow-hidden border border-outline-variant/30">
-                    <div 
-                      class="bg-primary-fixed-dim h-full transition-all duration-1000"
-                      :style="{ width: calculatePercentage(clicks, analyticsData.totalClicks) }"
-                    ></div>
+                    <div class="bg-primary-fixed-dim h-full transition-all duration-1000" :style="{ width: calculatePercentage(clicks, analyticsData.totalClicks) }"></div>
                   </div>
                 </div>
               </div>
             </div>
-
           </div>
         </div>
-
         <div class="border-t border-outline-variant/40 pt-4 font-code text-[11px] text-on-surface-variant text-left flex justify-between">
           <span>SYSTEM_STATUS // ONLINE</span>
           <span>V1.0.0</span>
@@ -236,7 +224,7 @@ const formatDate = (dateStr) => {
         <div class="space-y-2 text-left">
           <h3 class="font-display text-lg font-bold text-on-background uppercase tracking-tight">PURGE_SHORT_CODE?</h3>
           <p class="font-code text-xs text-on-surface-variant leading-relaxed">
-            Apakah Anda yakin ingin memusnahkan link pendek <span class="text-primary-fixed-dim font-bold">'{{ targetDeleteCode }}'</span>? Data pada layer Database & cache Redis akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan.
+            Apakah Anda yakin ingin memusnahkan link pendek <span class="text-primary-fixed-dim font-bold">'{{ targetDeleteCode }}'</span>? Data pada layer Database & cache Redis akan dihapus secara permanen.
           </p>
         </div>
         <div class="flex gap-4 font-code text-xs pt-2">
@@ -249,15 +237,31 @@ const formatDate = (dateStr) => {
       </div>
     </div>
 
-    <div class="flex items-center justify-between mb-2">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-outline-variant/30 pb-4">
       <div class="flex items-center gap-3">
         <span class="w-1 h-6 bg-primary-container"></span>
         <h2 class="font-display text-lg font-bold text-on-background uppercase tracking-tight">Active_Repository_Central</h2>
       </div>
-      <div class="flex items-center gap-4 text-on-surface-variant font-code text-xs">
-        <span>TOTAL_ENTRIES: {{ String(totalEntries).padStart(2, '0') }}</span>
-        <button class="material-symbols-outlined text-lg hover:text-primary-fixed-dim">filter_list</button>
+      
+      <div class="w-full sm:w-72 relative">
+        <span class="material-symbols-outlined text-on-surface-variant text-lg absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+          search
+        </span>
+        <input 
+          v-model="searchQuery"
+          type="text"
+          placeholder="FILTER_BY_SHORT_CODE..."
+          class="w-full bg-surface-container-low border border-outline-variant focus:border-primary-container text-on-surface placeholder:text-on-surface-variant/50 font-code text-xs pl-10 pr-4 py-2.5 outline-none transition-all rounded-none"
+        />
+        <span v-if="searchQuery" class="font-code text-[9px] text-primary-fixed-dim absolute right-3 top-1/2 -translate-y-1/2 bg-primary-container/10 px-1 py-0.5 border border-primary-container/20">
+          LIVE
+        </span>
       </div>
+    </div>
+
+    <div class="flex justify-between items-center text-on-surface-variant font-code text-[11px] bg-surface-container-low border border-outline-variant/40 px-4 py-2">
+      <span class="uppercase">Data_Stream: Stable</span>
+      <span>TOTAL_ENTRIES: {{ String(totalEntries).padStart(2, '0') }}</span>
     </div>
 
     <div v-if="successMessage" class="p-3 bg-green-950/40 border border-primary-container text-primary-container font-code text-xs uppercase text-left animate-in fade-in duration-200">

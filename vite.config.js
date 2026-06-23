@@ -4,7 +4,7 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [vue(), vueDevTools()],
+  plugins: [vue()],
   server: {
     proxy: {
       // Jika mendeteksi request diawali dengan '/api', belokkan ke server backend utama

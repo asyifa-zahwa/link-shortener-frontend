@@ -54,7 +54,8 @@ const handleRegister = async () => {
         router.push('/auth/login')
       }, 1500)
     } else {
-      errorMessage.value = data.message || 'REGISTRATION_FAILED // Server refused query.'
+      console.log('Registration failed:', data);
+      errorMessage.value = data?.errors?.password ||data?.message || 'REGISTRATION_FAILED // Server refused query.'
     }
 
   } catch (error) {

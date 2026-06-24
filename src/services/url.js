@@ -42,5 +42,20 @@ export const urlService = {
     return await apiClient(`/api/v1/urls/${shortCode}/analytics`, {
       method: 'GET'
     })
-  }
+  },
+  
+  /**
+   * MENGEMBALIKAN FITUR: Pembuatan short link baru khusus TAMU/GUEST (BARU & BERSIH)
+   * @param {Object} payload - { longUrl: "https://..." }
+   */
+  async shortenUrlGuest(payload) {
+    return await apiClient('/api/v1/urls/guest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      skipAuth: true // Instruksi khusus agar apiClient TIDAK menyisipkan token Bearer
+    })
+  },
+
+
 }

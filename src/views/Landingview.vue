@@ -23,7 +23,7 @@ const handleShorten = async () => {
   isCopied.value = false
 
   try {
-    const { status, data } = await urlService.shortenUrlAsGuest({
+    const { status, data } = await urlService.shortenUrlGuest({
       longUrl: longUrl.value
     })
 
@@ -32,7 +32,7 @@ const handleShorten = async () => {
       generatedResult.value = data     // Berisi { longUrl, shortUrl, shortCode }
       longUrl.value = ''               // Reset field input utama seperti aslinya
     } else {
-      errorMessage.value = data.error || 'GENERATION_FAILED // Uplink rejected data block.'
+      errorMessage.value = data.errors.longUrl || 'GENERATION_FAILED // Uplink rejected data block.'
     }
   } catch (error) {
     errorMessage.value = 'NETWORK_CRASH // Communication with compiler layer failed.'
